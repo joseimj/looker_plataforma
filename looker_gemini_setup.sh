@@ -22,7 +22,7 @@ LOOKER_URL="https://your-instance.looker.com"
 LOOKER_CLIENT_ID="YOUR_LOOKER_CLIENT_ID"
 LOOKER_CLIENT_SECRET="YOUR_LOOKER_CLIENT_SECRET"
 
-# Agentspace
+# Gemini Enterprise
 AS_APP="YOUR_GEMINI_ENTERPRISE_AGENT_ID"
 AGENT_DISPLAY_NAME="Looker Agent"
 AGENT_DESCRIPTION="Looker MCP Capability."
@@ -56,7 +56,7 @@ echo "=================================================="
 SA_NAME="toolbox-identity"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Crear SA solo si no existe
+# Crea una Service Account solo si no existe
 if ! gcloud iam service-accounts describe "$SA_EMAIL" --project="$PROJECT_ID" &>/dev/null; then
   gcloud iam service-accounts create "$SA_NAME" --project="$PROJECT_ID"
   echo "Service account creada: $SA_EMAIL"
