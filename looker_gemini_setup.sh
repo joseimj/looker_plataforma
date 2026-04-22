@@ -38,7 +38,7 @@ gcloud config set project "$PROJECT_ID"
 
 echo ""
 echo "=================================================="
-echo " PASO 1: Habilitar APIs necesarias"
+echo " PASO 1: Habilita las APIs necesarias"
 echo "=================================================="
 gcloud services enable \
   run.googleapis.com \
