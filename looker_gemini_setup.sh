@@ -146,14 +146,14 @@ echo ""
 echo "=================================================="
 echo " PASO 6: Desplegar MCP Toolbox en Cloud Run"
 echo "=================================================="
-IMAGE="us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:latest"
+IMAGE="us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:1.1.0"
 
 gcloud run deploy toolbox \
   --image="$IMAGE" \
   --service-account="$SA_EMAIL" \
   --region="$REGION" \
-  --set-secrets="/app/tools.yaml=${SECRET_NAME}:latest" \
-  --args='--tools-file=/app/tools.yaml,--address=0.0.0.0,--port=8080' \
+  --set-env-vars="LOOKER_BASE_URL=${LOOKER_URL},LOOKER_CLIENT_ID=${LOOKER_CLIENT_ID},LOOKER_CLIENT_SECRET=${LOOKER_CLIENT_SECRET},LOOKER_VERIFY_SSL=true" \
+  --args="--prebuilt=looker","--address=0.0.0.0","--port=8080" \
   --no-allow-unauthenticated \
   --project="$PROJECT_ID"
 
