@@ -219,6 +219,11 @@ LOOKERSDK_CLIENT_ID=${LOOKER_CLIENT_ID}
 LOOKERSDK_CLIENT_SECRET=${LOOKER_CLIENT_SECRET}
 LOOKERSDK_VERIFY_SSL=true
 EOF
+cat > looker_app/requirements.txt <<EOF
+looker_sdk
+google-auth
+requests
+EOF
 
 cat > looker_app/agent.py <<EOF
 import os
