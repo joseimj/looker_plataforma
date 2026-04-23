@@ -43,6 +43,7 @@ SERVICES=(
   "bigquery.googleapis.com"
   "bigquerystorage.googleapis.com"
   "cloudresourcemanager.googleapis.com"
+  "cloudaicompanion.googleapis.com"
 )
 
 echo "Habilitando APIs necesarias..."
