@@ -386,12 +386,18 @@ echo "=================================================="
 echo " PASO 11: Registrar agente en Gemini Enterprise"
 echo "=================================================="
 ACCESS_TOKEN=$(gcloud auth print-access-token)
+# Determinar el endpoint dinámico correcto según la región
+if [ "$ENGINE_LOCATION" = "global" ]; then
+  API_ENDPOINT="discoveryengine.googleapis.com"
+else
+  API_ENDPOINT="${ENGINE_LOCATION}-discoveryengine.googleapis.com"
+fi
 
 curl -s -X POST \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
   -H "Content-Type: application/json" \
   -H "X-Goog-User-Project: ${PROJECT_NUMBER}" \
-  "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_NUMBER}/locations/${ENGINE_LOCATION}/collections/default_collection/engines/${AS_APP}/assistants/default_assistant/agents" \
+  "https://${API_ENDPOINT}.googleapis.com/v1alpha/projects/${PROJECT_NUMBER}/locations/${ENGINE_LOCATION}/collections/default_collection/engines/${AS_APP}/assistants/default_assistant/agents" \
   -d "{
     \"displayName\": \"${AGENT_DISPLAY_NAME}\",
     \"description\": \"${AGENT_DESCRIPTION}\",
