@@ -153,7 +153,7 @@ gcloud run deploy toolbox \
   --service-account="$SA_EMAIL" \
   --region="$REGION" \
   --set-secrets="/app/tools.yaml=${SECRET_NAME}:latest" \
-  --args="--tools_file=/app/tools.yaml,--address=0.0.0.0,--port=8080" \
+  --args='--tools-file=/app/tools.yaml,--address=0.0.0.0,--port=8080' \
   --no-allow-unauthenticated \
   --project="$PROJECT_ID"
 
