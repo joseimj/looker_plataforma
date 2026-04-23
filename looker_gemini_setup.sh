@@ -368,7 +368,7 @@ DEPLOY_OUTPUT=$(adk deploy agent_engine \
   --region="$REGION" \
   --staging_bucket="gs://${BUCKET_NAME}" \
   --display_name="looker-agent1" \
-  looker_app 2>&1)
+  looker_app 2>&1 | tee deploy_temp.log)
 
 echo "$DEPLOY_OUTPUT"
 
