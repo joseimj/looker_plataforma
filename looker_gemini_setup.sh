@@ -3,7 +3,7 @@
 # setup_looker_gemini_enterprise.sh
 # Automatiza: MCP Toolbox en Cloud Run + ADK Agent en Agent Engine + Gemini Enterprise
 # Basado en: https://medium.com/google-cloud/connect-looker-to-agentspace-in-minutes-with-mcp-toolbox-and-the-adk-8e37ae096f49 de Rob Carr
-# Modificado por Jose Maldonado Abril de 2026
+# Modificado por Jose Maldonado (joseim@google.com) Abril de 2026
 # =============================================================================
 
 set -euo pipefail
