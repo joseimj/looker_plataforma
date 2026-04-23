@@ -24,6 +24,7 @@ LOOKER_CLIENT_SECRET="YOUR_LOOKER_CLIENT_SECRET"
 
 # Gemini Enterprise
 AS_APP="YOUR_GEMINI_ENTERPRISE_AGENT_ID"
+ENGINE_LOCATION="us"
 AGENT_DISPLAY_NAME="Looker Agent"
 AGENT_DESCRIPTION="Looker MCP Capability."
 TOOL_DESCRIPTION="Looker's Query Engine is used to answer Ecommerce questions."
@@ -390,7 +391,7 @@ curl -s -X POST \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
   -H "Content-Type: application/json" \
   -H "X-Goog-User-Project: ${PROJECT_NUMBER}" \
-  "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_NUMBER}/locations/global/collections/default_collection/engines/${AS_APP}/assistants/default_assistant/agents" \
+  "https://discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_NUMBER}/locations/${ENGINE_LOCATION}/collections/default_collection/engines/${AS_APP}/assistants/default_assistant/agents" \
   -d "{
     \"displayName\": \"${AGENT_DISPLAY_NAME}\",
     \"description\": \"${AGENT_DESCRIPTION}\",
