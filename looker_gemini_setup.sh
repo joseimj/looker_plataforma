@@ -247,6 +247,28 @@ def get_id_token():
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
     return id_token
 
+def render_dashboard(dashboard_id: str) -> str:
+    """Renderiza un dashboard de Looker y retorna URL de imagen."""
+    sdk = looker_sdk.init40()
+    task = sdk.create_dashboard_render_task(
+        dashboard_id=dashboard_id,
+        result_format="png",
+        body=looker_sdk.models.CreateDashboardRenderTask(
+            dashboard_style="tiled",
+            dashboard_filters=""
+        ),
+        width=1200,
+        height=800,
+    )
+    # Polling hasta que termine
+    import time
+    while True:
+        status = sdk.render_task(task.id)
+        if status.status == "complete":
+            result = sdk.render_task_results(task.id)
+            return result  # bytes PNG
+        time.sleep(2)
+
 def get_look_png(look_id: str) -> dict:
     """
     Exporta un Look de Looker como imagen PNG en base64.
@@ -319,14 +341,10 @@ root_agent = LlmAgent(
     name='looker_agent',
     description='Agent to answer questions about Looker data and generate charts.',
     instruction=(
-        'You are a helpful agent who can answer user questions about Looker data '
-        'and generate visual charts. '
-        'Use get_look_png to retrieve an existing Look as a chart image. '
-        'Use run_query_as_png to run a custom query and return it as a chart. '
-        'Use get_look_url to generate an embed URL for a Look. '
-        'Use the MCP tools to explore models and data. '
-        'If unsure what model to use, default to thelook. '
-        'If unsure on explore, try order_items.'
+        'You are a helpful agent who can answer user questions about Looker data. '
+        'When a user asks for a dashboard or visualization, use generate_embed_url '
+        'to return a clickable Looker dashboard URL instead of raw data. '
+        'Always prefer returning embed URLs for dashboards over raw query results.'
     ),
     planner=BuiltInPlanner(
         thinking_config=ThinkingConfig(include_thoughts=False, thinking_budget=0)
