@@ -31,7 +31,7 @@ TOOL_DESCRIPTION="Looker's Query Engine is used to answer Ecommerce questions."
 
 echo ""
 echo "=================================================="
-echo " PASO 0: Verificar autenticación y proyecto, levanta las APIS necesarias"
+echo " PASO 0: Verificar autenticación y proyecto, levanta algunas APIS necesarias"
 echo "=================================================="
 gcloud auth list
 gcloud config set project "$PROJECT_ID"
