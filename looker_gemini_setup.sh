@@ -197,7 +197,7 @@ mkdir -p my-agents && cd my-agents
 python3 -m venv .venv
 source .venv/bin/activate
 
-pip install --quiet google-adk toolbox-core
+pip install --quiet google-adk toolbox-core looker-sdk
 
 echo ""
 echo "=================================================="
@@ -213,10 +213,17 @@ cat > looker_app/.env <<EOF
 GOOGLE_GENAI_USE_VERTEXAI=1
 GOOGLE_CLOUD_PROJECT=${PROJECT_ID}
 GOOGLE_CLOUD_LOCATION=${REGION}
+LOOKERSDK_BASE_URL=${LOOKER_URL}
+LOOKERSDK_CLIENT_ID=${LOOKER_CLIENT_ID}
+LOOKERSDK_CLIENT_SECRET=${LOOKER_CLIENT_SECRET}
+LOOKERSDK_VERIFY_SSL=true
 EOF
 
 cat > looker_app/agent.py <<EOF
 import os
+import looker_sdk
+import base64
+from looker_sdk import models40
 from google.adk.agents import LlmAgent
 from google.adk.planners.built_in_planner import BuiltInPlanner
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
@@ -234,14 +241,86 @@ def get_id_token():
     id_token = google.oauth2.id_token.fetch_id_token(auth_req, audience)
     return id_token
 
+def get_look_png(look_id: str) -> dict:
+    """
+    Exporta un Look de Looker como imagen PNG en base64.
+    Args:
+        look_id: El ID numérico del Look en Looker.
+    Returns:
+        Diccionario con la imagen en base64 y el mime type.
+    """
+    sdk = looker_sdk.init40()
+    png_bytes = sdk.run_look(look_id=look_id, result_format="png")
+    encoded = base64.b64encode(png_bytes).decode("utf-8")
+    return {
+        "mime_type": "image/png",
+        "data": encoded,
+        "look_id": look_id
+    }
+
+def get_look_url(look_id: str) -> dict:
+    """
+    Genera una URL de embed SSO para un Look de Looker.
+    Args:
+        look_id: El ID numérico del Look en Looker.
+    Returns:
+        Diccionario con la URL del gráfico embebido.
+    """
+    sdk = looker_sdk.init40()
+    embed = sdk.create_sso_embed_url(
+        body=models40.EmbedSsoParams(
+            target_url=f"/embed/looks/{look_id}",
+            session_length=3600,
+            force_logout_login=True,
+        )
+    )
+    return {
+        "look_id": look_id,
+        "embed_url": embed.url
+    }
+
+def run_query_as_png(model: str, explore: str, fields: list[str]) -> dict:
+    """
+    Ejecuta una query en Looker y devuelve el resultado como imagen PNG en base64.
+    Args:
+        model: El nombre del modelo LookML (ej: thelook).
+        explore: El nombre del explore (ej: order_items).
+        fields: Lista de campos a incluir (ej: ['orders.count', 'orders.status']).
+    Returns:
+        Diccionario con la imagen en base64 y el mime type.
+    """
+    sdk = looker_sdk.init40()
+    query = sdk.create_query(
+        body=models40.WriteQuery(
+            model=model,
+            view=explore,
+            fields=fields,
+            limit="500",
+        )
+    )
+    png_bytes = sdk.run_query(query_id=str(query.id), result_format="png")
+    encoded = base64.b64encode(png_bytes).decode("utf-8")
+    return {
+        "mime_type": "image/png",
+        "data": encoded,
+        "model": model,
+        "explore": explore,
+        "fields": fields
+    }
+
 root_agent = LlmAgent(
     model='gemini-2.5-flash',
     name='looker_agent',
-    description='Agent to answer questions about Looker data.',
+    description='Agent to answer questions about Looker data and generate charts.',
     instruction=(
-        'You are a helpful agent who can answer user questions about Looker data. '
-        'Use the tools to answer the question. If unsure what model to use, try '
-        'defaulting to thelook. If unsure on explore, try order_items.'
+        'You are a helpful agent who can answer user questions about Looker data '
+        'and generate visual charts. '
+        'Use get_look_png to retrieve an existing Look as a chart image. '
+        'Use run_query_as_png to run a custom query and return it as a chart. '
+        'Use get_look_url to generate an embed URL for a Look. '
+        'Use the MCP tools to explore models and data. '
+        'If unsure what model to use, default to thelook. '
+        'If unsure on explore, try order_items.'
     ),
     planner=BuiltInPlanner(
         thinking_config=ThinkingConfig(include_thoughts=False, thinking_budget=0)
@@ -254,7 +333,10 @@ root_agent = LlmAgent(
             ),
             errlog=None,
             tool_filter=None,
-        )
+        ),
+        get_look_png,
+        get_look_url,
+        run_query_as_png,
     ],
 )
 EOF
