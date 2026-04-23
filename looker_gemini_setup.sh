@@ -31,10 +31,29 @@ TOOL_DESCRIPTION="Looker's Query Engine is used to answer Ecommerce questions."
 
 echo ""
 echo "=================================================="
-echo " PASO 0: Verificar autenticación y proyecto"
+echo " PASO 0: Verificar autenticación y proyecto, levanta las APIS necesarias"
 echo "=================================================="
 gcloud auth list
 gcloud config set project "$PROJECT_ID"
+# Lista de servicios necesarios
+SERVICES=(
+  "aiplatform.googleapis.com"
+  "looker.googleapis.com"
+  "iam.googleapis.com"
+  "bigquery.googleapis.com"
+  "bigquerystorage.googleapis.com"
+  "cloudresourcemanager.googleapis.com"
+)
+
+echo "Habilitando APIs necesarias..."
+for SERVICE in "${SERVICES[@]}"; do
+  gcloud services enable "$SERVICE" --project="$PROJECT_ID"
+  if [ $? -eq 0 ]; then
+    echo "✅ $SERVICE habilitada."
+  else
+    echo "❌ Error al habilitar $SERVICE."
+  fi
+done
 
 echo ""
 echo "=================================================="
