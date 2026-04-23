@@ -49,9 +49,9 @@ echo "Habilitando APIs necesarias..."
 for SERVICE in "${SERVICES[@]}"; do
   gcloud services enable "$SERVICE" --project="$PROJECT_ID"
   if [ $? -eq 0 ]; then
-    echo "✅ $SERVICE habilitada."
+    echo "$SERVICE habilitada."
   else
-    echo "❌ Error al habilitar $SERVICE."
+    echo "Error al habilitar $SERVICE."
   fi
 done
 
