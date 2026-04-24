@@ -555,22 +555,86 @@ echo "Agente creado."
 
 echo ""
 echo "=================================================="
-echo " PASO 7: Desplegar con SA custom"
+echo " PASO 7: Desplegar con Python SDK (soporta SA custom)"
 echo "  (tarda 15-20 min, usara: $AGENT_SA)"
 echo "=================================================="
+
+# Instalar Vertex AI SDK con agent_engines
+pip install --quiet --upgrade "google-cloud-aiplatform[agent_engines,adk]"
+
+# Crear deploy.py que usa el Python SDK
+cat > deploy.py <<'DEPLOYEOF'
+import os
+import sys
+import vertexai
+from vertexai.preview import reasoning_engines
+from vertexai import agent_engines
+
+# Importar el agente
+from looker_app.agent import root_agent
+
+PROJECT_ID = os.environ["PROJECT_ID"]
+REGION = os.environ["REGION"]
+STAGING_BUCKET = f"gs://{os.environ['BUCKET_NAME']}"
+AGENT_SA = os.environ["AGENT_SA"]
+
+vertexai.init(
+    project=PROJECT_ID,
+    location=REGION,
+    staging_bucket=STAGING_BUCKET,
+)
+
+print(f"Desplegando agente con SA: {AGENT_SA}", flush=True)
+print(f"Staging bucket: {STAGING_BUCKET}", flush=True)
+
+app = reasoning_engines.AdkApp(agent=root_agent, enable_tracing=True)
+
+env_vars = {
+    "LOOKERSDK_BASE_URL": os.environ["LOOKER_URL"],
+    "LOOKERSDK_CLIENT_ID": os.environ["LOOKER_CLIENT_ID"],
+    "LOOKERSDK_CLIENT_SECRET": os.environ["LOOKER_CLIENT_SECRET"],
+    "LOOKERSDK_VERIFY_SSL": "true",
+    "LOOKER_EMBED_SECRET": os.environ["LOOKER_EMBED_SECRET"],
+    "LOOKER_MODELS": os.environ.get("LOOKER_MODELS", '["thelook"]'),
+    "LOOKER_IMAGES_BUCKET": os.environ["IMAGES_BUCKET"],
+    "GOOGLE_GENAI_USE_VERTEXAI": "1",
+    "GOOGLE_CLOUD_PROJECT": PROJECT_ID,
+    "GOOGLE_CLOUD_LOCATION": REGION,
+}
+
+try:
+    remote_app = agent_engines.create(
+        agent_engine=app,
+        display_name="looker-agent1",
+        requirements=[
+            "google-adk",
+            "toolbox-core",
+            "looker_sdk",
+            "google-cloud-storage",
+            "google-auth",
+            "google-cloud-aiplatform[agent_engines,adk]",
+            "requests",
+        ],
+        extra_packages=["./looker_app"],
+        service_account=AGENT_SA,
+        env_vars=env_vars,
+    )
+    print(f"AGENT_ENGINE_RESOURCE_NAME={remote_app.resource_name}", flush=True)
+except Exception as e:
+    print(f"ERROR: {e}", file=sys.stderr, flush=True)
+    sys.exit(1)
+DEPLOYEOF
+
+# Exportar variables para el deploy.py
+export PROJECT_ID REGION BUCKET_NAME AGENT_SA IMAGES_BUCKET
+export LOOKER_URL LOOKER_CLIENT_ID LOOKER_CLIENT_SECRET
+export LOOKER_EMBED_SECRET LOOKER_MODELS
 
 DEPLOY_LOG="/tmp/adk_deploy_$$.log"
 > "$DEPLOY_LOG"
 
-# *** CLAVE: --service_account hace que Agent Engine use la SA con permisos ***
-adk deploy agent_engine \
-  --project="$PROJECT_ID" \
-  --region="$REGION" \
-  --staging_bucket="gs://${BUCKET_NAME}" \
-  --service_account="$AGENT_SA" \
-  --display_name="looker-agent1" \
-  looker_app > "$DEPLOY_LOG" 2>&1 &
-
+# Correr deploy en background
+python deploy.py > "$DEPLOY_LOG" 2>&1 &
 DEPLOY_PID=$!
 echo "Deploy en background (PID: $DEPLOY_PID)"
 
@@ -588,26 +652,39 @@ wait $DEPLOY_PID
 DEPLOY_EXIT=$?
 
 echo ""
+echo "=== OUTPUT DEL DEPLOY ==="
 cat "$DEPLOY_LOG"
+echo "========================="
 
 if [ $DEPLOY_EXIT -ne 0 ]; then
   echo "ERROR: Deploy fallo"
   exit 1
 fi
 
-REASONING_ENGINE=$(grep -oE 'projects/[^/]+/locations/[^/]+/reasoningEngines/[0-9]+' "$DEPLOY_LOG" | head -1 || true)
+# Extraer el Reasoning Engine del output del Python SDK
+REASONING_ENGINE=$(grep "AGENT_ENGINE_RESOURCE_NAME=" "$DEPLOY_LOG" | tail -1 | cut -d= -f2- || true)
 
+# Fallback al patron estandar
 if [ -z "$REASONING_ENGINE" ]; then
-  REASONING_ENGINE=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-    "https://${REGION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${REGION}/reasoningEngines" \
-    | python3 -c "
+  REASONING_ENGINE=$(grep -oE 'projects/[^/]+/locations/[^/]+/reasoningEngines/[0-9]+' "$DEPLOY_LOG" | head -1 || true)
+fi
+
+# Fallback ultimo via API REST
+if [ -z "$REASONING_ENGINE" ]; then
+  cat > /tmp/extract_engine.py <<'PYPARSER'
 import json, sys
 try:
     d = json.load(sys.stdin)
     engines = [e for e in d.get('reasoningEngines', []) if e.get('displayName') == 'looker-agent1']
-    if engines: print(engines[-1]['name'])
-except: pass
-")
+    if engines:
+        print(engines[-1]['name'])
+except Exception:
+    pass
+PYPARSER
+
+  REASONING_ENGINE=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    "https://${REGION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${REGION}/reasoningEngines" \
+    | python3 /tmp/extract_engine.py)
 fi
 
 if [ -z "$REASONING_ENGINE" ]; then
