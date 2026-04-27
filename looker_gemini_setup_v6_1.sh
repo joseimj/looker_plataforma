@@ -10,6 +10,7 @@
 #   - Ejemplos few-shot de preguntas tipicas y como responderlas
 #   - Formateo de numeros y fechas en lenguaje natural
 # Resto: identico al v6 (Cloud Run, MCP Toolbox prebuilt=looker, agent SA, etc)
+# Jose Maldonado @joseim Abril 2026
 # =============================================================================
 
 set -euo pipefail
