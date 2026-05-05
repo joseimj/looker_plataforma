@@ -47,6 +47,8 @@ La versión más reciente (looker_gemini_setup_v8.sh) implementa una arquitectur
                                 ┌──────────────────────┐
                                 │ Looker API           │
                                 └──────────────────────┘
+
+
 Componentes clave:
 
 Memorystore Redis Standard HA (5 GB) — cache distribuido con namespace por cliente (X-Client-ID)
